@@ -1,0 +1,14 @@
+[general]
+# Enable specific community contributed rules
+contrib=contrib-title-conventional-commits
+
+### Configuring rules ###
+
+[title-max-length]
+line-length=100
+
+[title-min-length]
+min-length=5
+
+[contrib-title-conventional-commits]
+types = fix,feat,chore,build,docs
