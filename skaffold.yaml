@@ -1,0 +1,21 @@
+apiVersion: skaffold/v4beta12
+kind: Config
+metadata:
+  name: redata
+manifests:
+  kustomize:
+    paths:
+      - k8s
+build:
+  artifacts:
+    - image: redata
+      context: .
+      docker:
+        dockerfile: "Dockerfile"
+
+portForward:
+  - resourceType: service
+    resourceName: redata
+    namespace: redata
+    port: 8080
+    localPort: 8080
