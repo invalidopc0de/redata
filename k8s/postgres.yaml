@@ -1,0 +1,91 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-secret
+  labels:
+    app: postgres
+  namespace: redata
+data:
+  POSTGRES_DB: "redata"
+  POSTGRES_USER: "redata"
+  POSTGRES_PASSWORD: "1gMAfO7Xa49TpYHoqtYH"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init
+  labels:
+    app: postgres
+  namespace: redata
+data:
+  init-redata.sql: |
+    CREATE TABLE redata_runs(
+        RunId uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        Name varchar(255)
+    );
+
+  init-iceberg-metadata.sql: |
+    CREATE TABLE iceberg_tables
+    (
+        catalog_name               VARCHAR(255) NOT NULL,
+        table_namespace            VARCHAR(255) NOT NULL,
+        table_name                 VARCHAR(255) NOT NULL,
+        metadata_location          VARCHAR(1000),
+        previous_metadata_location VARCHAR(1000),
+        PRIMARY KEY (catalog_name, table_namespace, table_name)
+    );
+
+    CREATE TABLE iceberg_namespace_properties
+    (
+        catalog_name   VARCHAR(255) NOT NULL,
+        namespace      VARCHAR(255) NOT NULL,
+        property_key   VARCHAR(255),
+        property_value VARCHAR(1000),
+        PRIMARY KEY (catalog_name, namespace, property_key)
+    );
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: redata
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5432
+  selector:
+    app: postgres
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: redata
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: 'postgres:14'
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5432
+          envFrom:
+            - configMapRef:
+                name: postgres-secret
+          volumeMounts:
+            - name: postgres-init
+              mountPath: "/docker-entrypoint-initdb.d"
+              readOnly: true
+
+      volumes:
+        - name: postgres-init
+          configMap:
+            name: postgres-init
