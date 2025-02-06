@@ -7,6 +7,8 @@ manifests:
     paths:
       - k8s
 build:
+  local:
+    useBuildkit: true
   artifacts:
     - image: redata
       context: .
