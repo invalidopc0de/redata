@@ -1,0 +1,43 @@
+type System {
+  id: ID!
+  name: String!
+}
+
+type Run {
+  id: ID!
+  system: System!
+}
+
+type RunProperty {
+  id: ID!
+  run: Run!
+  name: String!
+  value: String!
+}
+
+type RunTag {
+  id: ID!
+  run: Run!
+  value: String!
+}
+
+union BlobParent = Run | System
+
+type Blob {
+  id: ID!
+  parent: BlobParent!
+  name: String!
+  data_location: String!
+}
+
+type Query {
+  systems: [System!]!
+}
+
+input NewSystem {
+  name: String!
+}
+
+type Mutation {
+  createSystem(input: NewSystem!): System!
+}
