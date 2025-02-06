@@ -1,34 +1,29 @@
 FROM rust:1.84 AS server-build
-WORKDIR /src
+WORKDIR /app
 
-# Copy the Cargo.toml and Cargo.lock files
-COPY ./src/redata-server/Cargo.toml ./
-COPY ./src/redata-server/Cargo.lock ./
+COPY src/redata-server ./
 
-# Create an empty src directory to trick Cargo into thinking it's a valid Rust project
-RUN mkdir src && echo "fn main() { println!(\"Dummy\"); }" > ./src/main.rs
+RUN --mount=type=cache,target=/app/target/ \
+    --mount=type=cache,target=/usr/local/cargo/registry/ \
+    <<EOF
+set -e
+cargo build --locked --release
+cp ./target/release/redata-server /app/main
+EOF
 
-# Build the dependencies without the actual source code to cache dependencies separately
-RUN cargo build --release
-
-# Now copy the source code
-COPY ./src/redata-server/ /src/
-
-# Build your application
-RUN cargo build --release && objcopy --compress-debug-sections target/release/redata-server ./main
 
 FROM node:23 AS frontend-build
 
-WORKDIR /src
+WORKDIR /app
 
 COPY ./src/redata-frontend/package.json ./
 COPY ./src/redata-frontend/yarn.lock ./
 
 RUN yarn install
 
-ENV PATH=/src/node_modules/.bin:$PATH
+ENV PATH=/app/node_modules/.bin:$PATH
 
-COPY ./src/redata-frontend /src
+COPY ./src/redata-frontend /app
 
 RUN yarn run build
 
@@ -37,8 +32,8 @@ LABEL authors="Mark Saunders"
 
 WORKDIR /app
 
-COPY --from=server-build /src/main /app
-COPY --from=frontend-build /src/dist /www/static
+COPY --from=server-build /app/main /app
+COPY --from=frontend-build /app/dist /www/static
 
 ENV ROCKET_ADDRESS=0.0.0.0
 ENV ROCKET_PORT=8080
